@@ -38,28 +38,9 @@ LinuxAI hadir sebagai teman belajar yang selalu ada di terminalmu.
 
 ## 🖼️ Tampilan
 
-> Ilustrasi teks. Ganti dengan screenshot asli: `![LinuxAI](docs/images/screenshot.png)`
-
-```
-                       █    ███ █   █ █   █ █   █  ███  ███
-                       █     █  ██  █ █   █  █ █  █   █  █
-                       █     █  █ █ █ █   █   █   █████  █
-                       █     █  █  ██ █   █  █ █  █   █  █
-                       ████ ███ █   █  ███  █   █ █   █ ███
-
-                            Your Linux Companion
-                          Ask anything about Linux.
-
-                                [ LOCAL ]
-
- ┌─ /  ──────────────────────────────────────────────────────┐
- │ /clear      Bersihkan percakapan                          │
- │ /connect    Hubungkan provider AI                         │
- │ /copy       Salin jawaban terakhir                        │
- └───────────────────────────────────────────────────────────┘
-  Tanya apa saja tentang Linux...  (/help untuk bantuan)
-  LOCAL · tanpa internet
-```
+<div align="center">
+![LinuxAI](docs/images/screenshot.png)
+</div>
 
 ## 🚀 Mulai cepat
 
