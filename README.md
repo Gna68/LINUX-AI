@@ -39,7 +39,7 @@ LinuxAI hadir sebagai teman belajar yang selalu ada di terminalmu.
 ## 🖼️ Tampilan
 
 <div align="center">
-![LinuxAI](docs/images/screenshot.png)
+![preview](docs/images/screenshot.png)
 </div>
 
 ## 🚀 Mulai cepat
