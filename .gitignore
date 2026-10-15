@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+build/
+dist/
+.pytest_cache/
+# Jangan pernah commit konfigurasi / API key
+config.json
+*.key
+.env
