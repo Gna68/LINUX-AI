@@ -62,6 +62,108 @@ class LocalModeTests(unittest.TestCase):
             self.assertNotIn("sudah kujalankan", lowered)
 
 
+class KnowledgeBaseTests(unittest.TestCase):
+    """Cakupan luas, pencocokan tahan variasi bahasa, dan kualitas data basis pengetahuan."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.a = LocalAssistant()
+
+    def test_entry_ids_are_unique_and_base_is_broad(self):
+        ids = [e.id for e in ENTRIES]
+        self.assertEqual(len(ids), len(set(ids)))
+        self.assertGreaterEqual(len(ids), 200)
+
+    def test_every_key_resolves_to_its_own_entry(self):
+        """Tidak ada kunci yang 'dicuri' entri lain (bentrok kata kunci)."""
+        conflicts = []
+        for e in ENTRIES:
+            for key in e.keys:
+                got = self.a.find(key)
+                if got is None or got.id != e.id:
+                    conflicts.append((e.id, key, got.id if got else None))
+        self.assertEqual(conflicts, [])
+
+    def test_basic_questions_that_used_to_fail(self):
+        cases = {
+            "apa itu linux": "what-is-linux",
+            "linux itu apa": "what-is-linux",
+            "pengertian linux": "what-is-linux",
+            "apa itu kernel": "kernel",
+            "apa itu distro": "distro-def",
+            "apa itu npm": "cmd-node/npm",
+            "install nodejs": "cmd-node/npm",
+            "hyprland itu apa": "de-vs-wm",
+            "apa itu wayland": "wayland-x11",
+            "caranya copy paste file gimana": "cmd-cp",
+            "cara hapus file": "cmd-rm",
+            "bikin folder baru": "cmd-mkdir",
+            "cara keluar dari vim": "cmd-vim",
+            "apa itu git": "cmd-git",
+            "linux gratis ga": "open-source",
+            "aku mau install vscode": "app-vscode",
+            "gimana cara ganti wallpaper": "appearance",
+            "unable to locate package htop": "apt-unable-locate",
+            "bash: ./x.sh: bad interpreter: /bin/bash^M": "bad-interpreter",
+            "komputer saya panas kipas berisik": "fan-heat",
+            "cara nambahin user ke grup docker": "cmd-useradd/usermod",
+            "apa itu repository": "repo-def",
+            "gak bisa konek wifi": "wifi",
+            "layar hitam setelah login": "black-screen",
+            "externally-managed-environment": "pip-externally-managed",
+        }
+        for q, expected in cases.items():
+            with self.subTest(q=q):
+                self.assertEqual(self.a.answer(q).entry_id, expected)
+
+    def test_word_order_and_filler_words_do_not_matter(self):
+        for q in ("copy paste file caranya gimana", "tolong dong salin file gimana ya", "file mau di copy gimana"):
+            with self.subTest(q=q):
+                self.assertEqual(self.a.answer(q).entry_id, "cmd-cp")
+
+    def test_slang_and_informal_spelling(self):
+        for q, exp in (("gimana cara nginstall chrome", "app-browser"), ("nyalin file gimana", "cmd-cp"),
+                       ("ngapus folder gimana", "cmd-rm"), ("gabisa konek wifi", "wifi")):
+            with self.subTest(q=q):
+                self.assertEqual(self.a.answer(q).entry_id, exp)
+
+    def test_typos_are_corrected(self):
+        for q, exp in (("hyperland", "de-vs-wm"), ("apa itu wayand", "wayland-x11"), ("linuks", "what-is-linux"),
+                       ("instal virtuall box", "virtualization")):
+            with self.subTest(q=q):
+                self.assertEqual(self.a.answer(q).entry_id, exp)
+
+    def test_off_topic_is_still_unknown(self):
+        for q in ("kamu tau dota 2 ga", "resep nasi goreng enak", "siapa presiden indonesia", "qwertyuiop asdfgh"):
+            with self.subTest(q=q):
+                ans = self.a.answer(q)
+                self.assertFalse(ans.matched)
+                self.assertIn("bukan AI generatif", ans.text)
+                self.assertIn("/connect", ans.text)
+
+    def test_unknown_offers_related_topics(self):
+        ans = self.a.answer("cara mengatur bluetooth headset kualitas jelek di ruangan")
+        text = ans.text
+        self.assertIn("belum punya jawaban", text) if not ans.matched else None
+        sugg = self.a.suggest("masalah suara headset rusak")
+        self.assertTrue(sugg)
+        self.assertTrue(all(hasattr(s, "title") for s in sugg))
+
+    def test_definition_entries_do_not_hijack_long_questions(self):
+        ans = self.a.answer("bagaimana cara mengganti wallpaper linux saya yang sekarang jadi gambar pemandangan")
+        self.assertNotEqual(ans.entry_id, "what-is-linux")
+
+    def test_code_blocks_are_balanced_in_all_answers(self):
+        for e in ENTRIES:
+            with self.subTest(entry=e.id):
+                self.assertEqual(e.answer.count("```") % 2, 0)
+
+    def test_dangerous_commands_carry_warnings(self):
+        for entry_id in ("cmd-dd", "rm-rf", "cmd-rm", "gparted"):
+            ans = next(e for e in ENTRIES if e.id == entry_id).answer.lower()
+            self.assertTrue(any(w in ans for w in ("berbahaya", "hati-hati", "permanen", "risiko", "backup")), entry_id)
+
+
 class LocalModeOfflineTests(TmpConfigCase):
     def test_works_with_all_network_access_blocked(self):
         def boom(*a, **k):
@@ -82,3 +184,4 @@ class LocalModeOfflineTests(TmpConfigCase):
         self.assertIsNone(c.active_config)
         self.assertFalse(self.store.exists())
         self.assertEqual(c.status_line().split()[0], "LOCAL")
+

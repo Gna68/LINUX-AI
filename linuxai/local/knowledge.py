@@ -3,17 +3,9 @@
 """Basis pengetahuan Local Mode: data statis, tanpa file, tanpa jaringan."""
 from __future__ import annotations
 
-from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 
-
-@dataclass(frozen=True)
-class Entry:
-    id: str
-    title: str
-    keys: Tuple[str, ...]
-    answer: str
-    cmd: bool = False  # kunci satu kata yang ambigu: butuh konteks pertanyaan pendek/jelas
+from linuxai.local.entry import Entry, T  # noqa: F401  (Entry diekspor ulang)
 
 
 def _cmd(name: str, keys: str, fungsi: str, contoh: str, catatan: str = "") -> Entry:
@@ -37,7 +29,7 @@ COMMANDS: List[Entry] = [
     _cmd("mv", "mv|pindahkan file|ganti nama file|rename file", "memindahkan file/folder, sekaligus dipakai untuk mengganti nama.",
          "mv lama.txt baru.txt          # ganti nama\nmv laporan.txt ~/Documents/   # pindahkan",
          "Seperti cp, mv bisa menimpa file tujuan. Pakai mv -i agar ditanya dulu."),
-    _cmd("rm", "rm|hapus file|menghapus file|delete file", "menghapus file/folder secara PERMANEN (tidak masuk Recycle Bin).",
+    _cmd("rm", "rm|hapus file|menghapus file|delete file|hapus folder|menghapus folder|hapus direktori", "menghapus file/folder secara PERMANEN (tidak masuk Recycle Bin).",
          "rm -i catatan.txt   # tanya dulu sebelum hapus\nrm -r folder-lama   # hapus folder beserta isinya",
          "Tidak ada undo. Cek dulu dengan ls, dan hindari rm -rf kecuali kamu yakin 100% dengan path-nya."),
     _cmd("mkdir", "mkdir|buat folder|membuat folder", "membuat folder baru.",
@@ -70,7 +62,7 @@ COMMANDS: List[Entry] = [
          "Tanpa -c, ping berjalan terus sampai kamu menekan Ctrl+C."),
     _cmd("ip", "ip a|ip addr|ip route|cek ip|alamat ip|ip address", "menampilkan/mengatur pengaturan jaringan. Untuk pemula cukup untuk MELIHAT.",
          "ip a       # semua antarmuka dan alamat IP\nip route   # rute/gateway"),
-    _cmd("df", "df|sisa disk|ruang disk", "menampilkan pemakaian ruang disk per partisi.", "df -h   # -h = satuan mudah dibaca (GB/MB)"),
+    _cmd("df", "df|sisa disk", "menampilkan pemakaian ruang disk per partisi.", "df -h   # -h = satuan mudah dibaca (GB/MB)"),
     _cmd("du", "du|ukuran folder", "menampilkan ukuran folder/file.",
          "du -sh Downloads                    # total ukuran satu folder\ndu -h --max-depth=1 ~ | sort -h    # ukuran tiap sub-folder, terurut"),
     _cmd("ps", "ps|ps aux|daftar proses", "menampilkan daftar proses yang sedang berjalan.",
@@ -81,7 +73,7 @@ COMMANDS: List[Entry] = [
     _cmd("top/htop", "top|htop|task manager|manajer tugas|system monitor", "memantau proses, CPU, dan RAM (setara Task Manager).",
          "top     # tekan q untuk keluar\nhtop    # lebih nyaman; pasang dengan: sudo apt install htop",
          "Versi grafis: aplikasi 'System Monitor' dari menu."),
-    _cmd("systemctl", "systemctl|service|layanan sistem|daemon", "mengelola layanan sistem (service) di distro modern.",
+    _cmd("systemctl", "systemctl|service|layanan sistem", "mengelola layanan sistem (service) di distro modern.",
          "systemctl status ssh        # lihat status (aman)\nsystemctl --failed          # layanan yang gagal\nsudo systemctl restart ssh  # mengubah layanan: butuh sudo",
          "Perintah status itu hanya membaca. Start/stop/disable mengubah sistem, pahami dulu efeknya."),
     _cmd("journalctl", "journalctl|log sistem|lihat log", "membaca log sistem (setara Event Viewer).",
@@ -146,13 +138,13 @@ TOPICS: List[Entry] = [
           "Langkah diagnosis WiFi (semuanya hanya membaca info, tidak mengubah sistem):\n\n1. Apakah WiFi diblokir (airplane mode/tombol Fn)?\n```\nrfkill list\n```\n2. Apakah adapter terdeteksi dan siap?\n```\nnmcli device status\nip a\n```\n3. Apakah chip WiFi-mu dikenali dan memakai driver?\n```\nlspci -nnk | grep -iA3 net\n```\n4. Jika terhubung tapi tidak ada internet:\n```\nping -c 3 8.8.8.8\nping -c 3 google.com\n```\nHasil ping 8.8.8.8 berhasil tapi google.com gagal biasanya masalah DNS.\n\nDi Mint buka Driver Manager, di Ubuntu buka Software & Updates → Additional Drivers (chip Broadcom sering butuh driver tambahan; butuh internet lewat kabel/tethering USB). Tempel output langkah 1-3 dan sebutkan distro serta tipe laptopmu."),
     Entry("disk-space", "Disk penuh", ("disk penuh", "ruang disk", "penyimpanan penuh", "cek disk", "sisa storage", "storage penuh", "no space left", "ruang penyimpanan habis", "disk space"),
           "Cek dan bersihkan ruang disk:\n```\ndf -h                              # pemakaian per partisi\ndu -h --max-depth=1 ~ | sort -h    # folder terbesar di home\n```\n- Aplikasi 'Disk Usage Analyzer' (Baobab) menampilkan peta ukuran secara grafis.\n- Bersihkan cache paket:\n```\nsudo apt autoremove\nsudo apt clean\n```\n- Kosongkan Trash dan cek folder Downloads.\n\nJangan menghapus file di /usr, /var, atau /etc secara manual jika tidak yakin."),
-    Entry("slow", "Komputer lambat / hang", ("linux lambat", "komputer lambat", "laptop lambat", "ram penuh", "cpu tinggi", "not responding", "aplikasi tidak merespon", "freeze", "komputer hang", "laptop panas", "sistem lambat", "lemot"),
+    Entry("slow", "Komputer lambat / hang", ("linux lambat", "komputer lambat", "laptop lambat", "ram penuh", "cpu tinggi", "not responding", "aplikasi tidak merespon", "freeze", "sistem lambat", "lemot"),
           "Diagnosis sistem lambat:\n1. Buka 'System Monitor' atau jalankan `top`/`htop` untuk melihat siapa yang memakai CPU/RAM.\n2. Cek RAM dan disk:\n```\nfree -h\ndf -h\n```\n3. Aplikasi macet: `xkill` lalu klik jendelanya, atau tutup dari System Monitor.\n4. Kurangi aplikasi startup (menu 'Startup Applications') dan tab browser.\n5. Pastikan pembaruan sudah terpasang dan driver GPU benar.\n6. Di laptop lama, pertimbangkan desktop ringan seperti Xfce.\n\nSebutkan spesifikasi (RAM, HDD/SSD) dan distro-mu untuk saran yang lebih tepat."),
     Entry("install-linux", "Install Linux / dual boot", ("dual boot", "dualboot", "install linux di laptop", "instal linux", "cara install linux", "bootable", "usb bootable", "rufus", "ventoy", "grub", "install linux di pc", "menginstal linux", "dual-boot"),
           "Garis besar memasang Linux (termasuk dual boot dengan Windows):\n\n1. BACKUP data pentingmu dulu. Mengubah partisi selalu berisiko.\n2. Unduh ISO dari situs resmi distro, lalu buat USB bootable (Ventoy, balenaEtcher, atau Rufus di Windows).\n3. Di Windows: matikan Fast Startup, dan jika memakai BitLocker simpan recovery key/nonaktifkan dulu. Kecilkan partisi Windows lewat Disk Management untuk menyisakan ruang.\n4. Boot dari USB (tombol menu boot biasanya F2/F12/Esc/Del, tergantung merek) dan coba mode Live lebih dulu.\n5. Jalankan installer; pilih 'Install alongside Windows' untuk dual boot.\n\nGRUB adalah menu pilihan OS saat boot. Merek/tipe laptop dan distro apa yang dituju?"),
-    Entry("boot-problem", "Masalah boot", ("tidak bisa boot", "stuck boot", "grub error", "layar hitam", "tidak bisa masuk linux", "boot error", "gagal boot", "tidak muncul grub", "linux tidak muncul"),
+    Entry("boot-problem", "Masalah boot", ("tidak bisa boot", "stuck boot", "grub error", "tidak bisa masuk linux", "boot error", "tidak muncul grub", "linux tidak muncul"),
           "Jika komputer tidak bisa boot ke Linux:\n1. Tenang dan jangan langsung format/instal ulang; data biasanya masih aman.\n2. Setelah update Windows, menu GRUB kadang hilang karena urutan boot berubah: cek menu boot BIOS/UEFI dan pilih entri Ubuntu/Mint.\n3. Pada menu GRUB, pilih 'Advanced options' → kernel yang lebih lama atau recovery mode.\n4. Boot dari live USB untuk mengambil data atau memperbaiki bootloader.\n5. Setelah berhasil masuk, lihat log: `journalctl -b -1 -p err`.\n\nCatat pesan error yang muncul, distro, dan apa yang terjadi sebelum masalah muncul."),
-    Entry("sysinfo", "Info sistem & spesifikasi", ("uname", "free -h", "lsblk", "lscpu", "spesifikasi", "cek ram", "cek cpu", "cek hardware", "info sistem", "neofetch", "cek spesifikasi", "spek laptop", "cek spek"),
+    Entry("sysinfo", "Info sistem & spesifikasi", ("uname", "free -h", "lscpu", "spesifikasi", "cek ram", "cek cpu", "cek hardware", "info sistem", "neofetch", "cek spesifikasi", "spek laptop", "cek spek"),
           "Perintah untuk melihat info sistem (hanya membaca):\n```\nlscpu          # CPU\nfree -h        # RAM\nlsblk          # disk dan partisi\nuname -r       # versi kernel\nlspci          # perangkat PCI (GPU, WiFi, dll.)\n```\nVersi grafis: Settings → About / System Info."),
     Entry("os-version", "Cek versi distro", ("cek versi linux", "versi ubuntu", "versi linux mint", "cek distro", "lsb_release", "os-release", "versi kernel", "versi linux", "saya pakai distro apa", "distro saya"),
           "Cek versi distro dan kernel:\n```\ncat /etc/os-release   # nama dan versi distro\nlsb_release -a        # alternatif (jika tersedia)\nuname -r              # versi kernel\nhostnamectl           # ringkasan sistem\n```\nDi Linux Mint ada juga /etc/linuxmint/info. Berguna untuk dikirim saat meminta bantuan."),
@@ -160,7 +152,7 @@ TOPICS: List[Entry] = [
           "Jika tidak ada suara:\n1. Settings → Sound: pastikan 'Output device' benar dan tidak dalam mode mute.\n2. Buka 'PulseAudio Volume Control' (pavucontrol) bila tersedia dan cek tab Playback/Output Devices.\n3. Di terminal, `alsamixer`: tekan M pada kolom yang bertanda MM untuk unmute.\n4. Restart komputer setelah pembaruan.\n\nSebutkan distro dan jenis output (speaker internal, HDMI, bluetooth)."),
     Entry("bluetooth", "Bluetooth", ("bluetooth", "bt tidak", "headset bluetooth", "earphone bluetooth"),
           "Masalah Bluetooth:\n1. Settings → Bluetooth: aktifkan dan pasangkan perangkat.\n2. Cek pemblokiran: `rfkill list`.\n3. Cek layanan (hanya membaca): `systemctl status bluetooth`.\n4. Hapus pasangan lama lalu pasangkan ulang jika perangkat sudah pernah terhubung ke OS lain (misalnya Windows).\n\nTipe perangkat dan distro-mu apa?"),
-    Entry("printer", "Printer", ("printer", "cetak", "print tidak", "scanner", "cups"),
+    Entry("printer", "Printer", ("printer", "cetak", "print tidak", "cups"),
           "Printer di Linux dikelola oleh CUPS. Buka Settings → Printers → Add. Untuk printer HP pasang paket `hplip`. Printer jaringan biasanya terdeteksi otomatis. Antarmuka CUPS ada di http://localhost:631. Sebutkan merek dan tipe printer untuk saran yang lebih tepat."),
     Entry("nvidia", "Driver GPU / NVIDIA", ("driver nvidia", "nvidia", "driver gpu", "kartu grafis", "resolusi layar", "brightness", "layar tidak pas", "driver amd", "driver vga"),
           "Driver grafis:\n- Linux Mint: buka Driver Manager, pilih driver NVIDIA yang direkomendasikan, lalu restart.\n- Ubuntu: Software & Updates → Additional Drivers. Lihat daftar rekomendasi: `ubuntu-drivers devices`.\n- GPU AMD dan Intel umumnya langsung berfungsi (driver ada di kernel).\n\nSetelah memasang driver, restart. Jika layar jadi hitam, boot ke recovery mode. Kartu grafis dan distro apa yang kamu pakai?"),
@@ -170,17 +162,23 @@ TOPICS: List[Entry] = [
           "Malware untuk Linux desktop jauh lebih jarang daripada di Windows, tapi tetap ada. Kebiasaan aman: pasang aplikasi dari repositori resmi, lakukan update rutin, jangan menjalankan skrip/`curl | bash` dari sumber asing, dan pakai password kuat. Antivirus seperti ClamAV opsional, berguna untuk memindai file yang akan dikirim ke pengguna Windows."),
     Entry("registry", "Registry Windows di Linux", ("registry", "regedit", "pengaturan sistem linux", "dconf", "gsettings"),
           "Linux tidak punya Registry pusat. Pengaturan disimpan sebagai file teks: konfigurasi sistem di /etc dan konfigurasi per-pengguna di ~/.config (serta ~/.bashrc, dll.). Desktop GNOME/Cinnamon menyimpan pengaturan di database dconf (lihat dengan aplikasi dconf-editor). Sebagian besar pengaturan cukup diubah lewat menu Settings."),
-    Entry("screenshot", "Screenshot dan shortcut", ("screenshot", "cara screenshot", "print screen", "prtsc", "tangkap layar", "tombol windows", "tombol super", "super key", "alt tab", "shortcut keyboard", "pintasan keyboard"),
+    Entry("screenshot", "Screenshot dan shortcut", ("screenshot", "cara screenshot", "print screen", "prtsc", "tangkap layar", "tombol windows"),
           "- Screenshot: tekan PrtSc (Print Screen); alat screenshot bawaan akan terbuka (Mint dan Ubuntu menyediakannya).\n- Tombol Super = tombol Windows: membuka menu/Activities.\n- Alt+Tab: pindah jendela. Ctrl+Alt+T: buka terminal.\n- Shortcut lain bisa dilihat/diubah di Settings → Keyboard → Shortcuts."),
-    Entry("ntfs", "Akses drive Windows (NTFS)", ("ntfs", "drive windows", "hardisk windows", "akses drive windows", "partisi ntfs", "flashdisk", "usb tidak terbaca", "disk read-only", "hibernated", "unclean file system", "tidak bisa mount", "flash disk", "hardisk eksternal"),
+    Entry("ntfs", "Akses drive Windows (NTFS)", ("ntfs", "drive windows", "hardisk windows", "akses drive windows", "partisi ntfs", "flashdisk", "usb tidak terbaca", "hibernated", "unclean file system", "tidak bisa mount", "flash disk", "hardisk eksternal"),
           "Linux bisa membaca dan menulis NTFS, tapi sering gagal jika Windows tidak dimatikan dengan benar.\n\n- Error 'hibernated' atau 'unclean file system' atau drive jadi read-only biasanya karena Fast Startup/Hibernate Windows. Solusi: di Windows matikan Fast Startup (Power Options), lalu Shut down penuh (bukan restart/hibernate).\n- Jangan memaksa menulis ke disk yang ditandai hibernasi; data bisa rusak.\n- Flashdisk muncul di file manager (sidebar) atau di /media/namamu/. Cek disk: `lsblk`.\n\nBeri tahu pesan error lengkapnya."),
     Entry("time-dualboot", "Jam salah di dual boot", ("jam salah", "waktu salah", "jam beda", "jam windows linux", "jam berbeda", "timezone", "zona waktu", "jam tidak sesuai", "waktu berbeda"),
           "Di dual boot, jam sering berbeda beberapa jam karena Windows menganggap jam hardware sebagai waktu lokal, sedangkan Linux menganggapnya UTC.\n\nCek: `timedatectl`. Perbaikan paling umum adalah menyamakan salah satu sisi (jangan lakukan keduanya):\n- Sisi Linux: `timedatectl set-local-rtc 1 --adjust-system-clock` (membuat Linux mengikuti waktu lokal; kurang direkomendasikan).\n- Sisi Windows: ubah setting registry RealTimeIsUniversal agar Windows memakai UTC.\n\nPastikan juga zona waktu di Settings → Date & Time sudah benar (Surabaya = WIB / Asia/Jakarta)."),
-    Entry("users", "Akun pengguna dan password", ("tambah user", "buat user", "adduser", "ganti password", "passwd", "lupa password", "reset password", "tambah akun", "buat akun"),
+    Entry("users", "Akun pengguna dan password", ("tambah user", "buat user", "ganti password", "passwd", "lupa password", "reset password", "tambah akun", "buat akun"),
           "- Ganti password sendiri: `passwd`.\n- Tambah pengguna: `sudo adduser namabaru`.\n- Lupa password: perlu langkah pemulihan lewat recovery mode atau live USB; langkahnya bergantung pada distro. Jangan format dulu, data masih aman. Beri tahu distro dan apakah disk-mu terenkripsi."),
     Entry("bash-config", "Konfigurasi bash, PATH, alias", ("path", "variabel lingkungan", "environment variable", "export", "bashrc", "~/.bashrc", "alias", "tambah path", "env variable"),
           "Pengaturan shell pribadi ada di ~/.bashrc (dibaca tiap terminal baru).\n```\nalias ll='ls -lah'                   # singkatan perintah\nexport PATH=\"$HOME/bin:$PATH\"        # tambah folder ke PATH\n```\nSetelah mengedit (misal `nano ~/.bashrc`), muat ulang dengan `source ~/.bashrc` atau buka terminal baru. Backup file dulu sebelum mengubahnya.", cmd=True),
 ]
 
 
-ENTRIES: List[Entry] = TOPICS + COMMANDS
+from linuxai.local.kb_commands import MORE_COMMANDS  # noqa: E402
+from linuxai.local.kb_concepts import CONCEPTS  # noqa: E402
+from linuxai.local.kb_howto import HOWTO  # noqa: E402
+from linuxai.local.kb_trouble import TROUBLE  # noqa: E402
+
+ENTRIES: List[Entry] = TOPICS + COMMANDS + CONCEPTS + MORE_COMMANDS + HOWTO + TROUBLE
+
